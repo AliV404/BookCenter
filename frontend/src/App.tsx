@@ -1,11 +1,15 @@
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { authorsApi, categoriesApi, publishersApi } from './api/endpoints'
+import { useAuth } from './auth/authContext'
+import { RequireAdmin, RequireAuth } from './auth/guards'
 import { Layout } from './components/Layout'
 import { BooksPage } from './pages/BooksPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoansPage } from './pages/LoansPage'
+import { LoginPage } from './pages/LoginPage'
 import { NamedResourcePage, type NamedResourceConfig } from './pages/NamedResourcePage'
 import { ReadersPage } from './pages/ReadersPage'
+import { RegisterPage } from './pages/RegisterPage'
 
 const authors: NamedResourceConfig = {
   queryKey: 'authors',
@@ -30,26 +34,41 @@ const publishers: NamedResourceConfig = {
   bookFilter: 'publisherId',
 }
 
+function Home() {
+  const { isAdmin } = useAuth()
+  return isAdmin ? <DashboardPage /> : <Navigate to="/my-loans" replace />
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="loans" element={<LoansPage />} />
-        <Route path="books" element={<BooksPage />} />
-        <Route path="readers" element={<ReadersPage />} />
-        {/* `key` resets page state when switching between these three routes. */}
-        <Route path="authors" element={<NamedResourcePage key="authors" config={authors} />} />
-        <Route path="categories" element={<NamedResourcePage key="categories" config={categories} />} />
-        <Route path="publishers" element={<NamedResourcePage key="publishers" config={publishers} />} />
-        <Route
-          path="*"
-          element={
-            <p>
-              Page not found. <Link to="/">Back to the dashboard</Link>
-            </p>
-          }
-        />
+      <Route path="login" element={<LoginPage />} />
+      <Route path="register" element={<RegisterPage />} />
+
+      <Route element={<RequireAuth />}>
+        <Route element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="books" element={<BooksPage />} />
+          <Route path="my-loans" element={<LoansPage mine />} />
+
+          <Route element={<RequireAdmin />}>
+            <Route path="loans" element={<LoansPage />} />
+            <Route path="readers" element={<ReadersPage />} />
+            {/* `key` resets page state when switching between these three routes. */}
+            <Route path="authors" element={<NamedResourcePage key="authors" config={authors} />} />
+            <Route path="categories" element={<NamedResourcePage key="categories" config={categories} />} />
+            <Route path="publishers" element={<NamedResourcePage key="publishers" config={publishers} />} />
+          </Route>
+
+          <Route
+            path="*"
+            element={
+              <p>
+                Page not found. <Link to="/">Back home</Link>
+              </p>
+            }
+          />
+        </Route>
       </Route>
     </Routes>
   )

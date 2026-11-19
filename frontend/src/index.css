@@ -626,3 +626,69 @@ textarea.input {
     max-width: none;
   }
 }
+
+/* ---------- Auth ---------- */
+.user-box {
+  margin-top: 24px;
+  padding: 14px 12px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.user-meta {
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: 28px 28px 22px;
+}
+
+.auth-brand {
+  padding: 0 0 18px;
+}
+
+.auth-subtitle {
+  margin: 4px 0 18px;
+}
+
+.auth-switch {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.button--block {
+  width: 100%;
+  padding: 10px 14px;
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  .user-box {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 10px;
+    padding: 10px 0 0;
+  }
+
+  .user-meta {
+    flex: 1;
+  }
+}

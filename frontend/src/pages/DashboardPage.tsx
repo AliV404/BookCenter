@@ -41,6 +41,8 @@ export function DashboardPage() {
         <Link to="/loans">All loans →</Link>
       </div>
       <LoanTable
+        showReader
+        canReturn
         loans={overdue.data?.items}
         isPending={overdue.isPending}
         error={overdue.error}

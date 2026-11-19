@@ -1,5 +1,14 @@
 const BASE_URL: string = import.meta.env.VITE_API_URL ?? '/api'
 
+/**
+ * Set by AuthProvider. Kept outside React so plain functions (the endpoint helpers)
+ * can attach the token without needing hooks.
+ */
+export const authSession: { token: string | null; onUnauthorized: () => void } = {
+  token: null,
+  onUnauthorized: () => {},
+}
+
 export type FieldErrors = Record<string, string[]>
 
 /**
@@ -47,6 +56,7 @@ export async function api<T>(path: string, { method = 'GET', body, params }: Req
       method,
       headers: {
         Accept: 'application/json',
+        ...(authSession.token && { Authorization: `Bearer ${authSession.token}` }),
         ...(body !== undefined && { 'Content-Type': 'application/json' }),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -54,6 +64,10 @@ export async function api<T>(path: string, { method = 'GET', body, params }: Req
   } catch {
     throw new ApiError(0, 'Cannot reach the server. Is the BookCenter API running?')
   }
+
+  // A 401 while we *had* a token means it expired or was revoked: sign out.
+  // (A 401 from the login form itself has no token, so it's just shown as an error.)
+  if (response.status === 401 && authSession.token) authSession.onUnauthorized()
 
   if (!response.ok) {
     let problem: ProblemDetails = {}

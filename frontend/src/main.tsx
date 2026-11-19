@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ApiError } from './api/client'
 import App from './App'
+import { AuthProvider } from './auth/AuthProvider'
 import { ToastProvider } from './components/Toast'
 import './index.css'
 
@@ -23,7 +24,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>

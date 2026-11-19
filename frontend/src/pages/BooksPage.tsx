@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fieldErrorsOf } from '../api/client'
 import { booksApi } from '../api/endpoints'
+import { useAuth } from '../auth/authContext'
 import type { Book, BookListParams } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Field } from '../components/Field'
@@ -18,6 +19,7 @@ import { useSaveMutation } from '../hooks/useSaveMutation'
 type FilterKey = 'authorId' | 'categoryId' | 'publisherId'
 
 export function BooksPage() {
+  const { isAdmin } = useAuth()
   // Filters live in the URL so links like /books?authorId=3 work and survive a refresh.
   const [searchParams, setSearchParams] = useSearchParams()
   const filterValue = (key: FilterKey) => {
@@ -62,11 +64,14 @@ export function BooksPage() {
   return (
     <>
       <PageHeader
-        title="Books"
+        title={isAdmin ? 'Books' : 'Catalog'}
+        subtitle={isAdmin ? undefined : 'Ask at the desk to borrow a book.'}
         actions={
-          <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
-            Add book
-          </button>
+          isAdmin && (
+            <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
+              Add book
+            </button>
+          )
         }
       />
 
@@ -108,7 +113,7 @@ export function BooksPage() {
               <th className="num hide-sm">Year</th>
               <th className="hide-sm">ISBN</th>
               <th className="num">Available</th>
-              <th className="actions" aria-label="Actions" />
+              {isAdmin && <th className="actions" aria-label="Actions" />}
             </tr>
           </thead>
           <tbody>
@@ -117,7 +122,7 @@ export function BooksPage() {
               error={list.error}
               isEmpty={list.data?.items.length === 0}
               emptyMessage="No books match."
-              colSpan={8}
+              colSpan={isAdmin ? 8 : 7}
             />
             {list.data?.items.map((book) => (
               <tr key={book.id}>
@@ -132,14 +137,16 @@ export function BooksPage() {
                     {book.copiesAvailable} / {book.totalCopies}
                   </span>
                 </td>
-                <td className="actions">
-                  <button type="button" className="button button--small" onClick={() => setEditing(book)}>
-                    Edit
-                  </button>
-                  <button type="button" className="button button--small button--ghost-danger" onClick={() => setDeleting(book)}>
-                    Delete
-                  </button>
-                </td>
+                {isAdmin && (
+                  <td className="actions">
+                    <button type="button" className="button button--small" onClick={() => setEditing(book)}>
+                      Edit
+                    </button>
+                    <button type="button" className="button button--small button--ghost-danger" onClick={() => setDeleting(book)}>
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

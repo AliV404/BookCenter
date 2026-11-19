@@ -25,9 +25,10 @@ const TABS: { status: LoanStatus; label: string }[] = [
 const DEFAULT_LOAN_DAYS = 14
 const MAX_LOAN_DAYS = 90 // must match CreateBorrowRecordValidator.MaxLoanDays
 
-export function LoansPage() {
+/** `mine`: a reader's own loans — read-only. The API also enforces this scoping. */
+export function LoansPage({ mine = false }: { mine?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const readerId = Number(searchParams.get('readerId')) || undefined
+  const readerId = mine ? undefined : Number(searchParams.get('readerId')) || undefined
 
   const [status, setStatus] = useState<LoanStatus>('active')
   const [page, setPage] = useState(1)
@@ -41,11 +42,13 @@ export function LoansPage() {
   return (
     <>
       <PageHeader
-        title="Loans"
+        title={mine ? 'My loans' : 'Loans'}
         actions={
-          <button type="button" className="button button--primary" onClick={() => setBorrowing(true)}>
-            New loan
-          </button>
+          !mine && (
+            <button type="button" className="button button--primary" onClick={() => setBorrowing(true)}>
+              New loan
+            </button>
+          )
         }
       />
 
@@ -69,7 +72,7 @@ export function LoansPage() {
         </div>
         <SearchInput
           value={search}
-          placeholder="Search book or reader…"
+          placeholder={mine ? 'Search books…' : 'Search book or reader…'}
           onChange={(value) => {
             setSearch(value)
             setPage(1)
@@ -83,10 +86,12 @@ export function LoansPage() {
       </div>
 
       <LoanTable
+        showReader={!mine}
+        canReturn={!mine}
         loans={list.data?.items}
         isPending={list.isPending}
         error={list.error}
-        emptyMessage={status === 'overdue' ? 'Nothing overdue. 🎉' : 'No loans here.'}
+        emptyMessage={status === 'overdue' ? 'Nothing overdue. 🎉' : mine ? "You haven't borrowed anything here yet." : 'No loans here.'}
       />
       <Pagination data={list.data} onPageChange={setPage} />
 
@@ -96,38 +101,41 @@ export function LoansPage() {
 }
 
 interface LoanTableProps {
+  showReader: boolean
+  canReturn: boolean
   loans: Loan[] | undefined
   isPending: boolean
   error: unknown
   emptyMessage: string
 }
 
-export function LoanTable({ loans, isPending, error, emptyMessage }: LoanTableProps) {
+export function LoanTable({ showReader, canReturn, loans, isPending, error, emptyMessage }: LoanTableProps) {
+  const columns = 4 + (showReader ? 1 : 0) + (canReturn ? 1 : 0)
   return (
     <div className="card table-wrap">
       <table className="table">
         <thead>
           <tr>
             <th>Book</th>
-            <th>Reader</th>
+            {showReader && <th>Reader</th>}
             <th className="hide-sm">Borrowed</th>
             <th>Due</th>
             <th>Status</th>
-            <th className="actions" aria-label="Actions" />
+            {canReturn && <th className="actions" aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
-          <TableStatus isPending={isPending} error={error} isEmpty={loans?.length === 0} emptyMessage={emptyMessage} colSpan={6} />
+          <TableStatus isPending={isPending} error={error} isEmpty={loans?.length === 0} emptyMessage={emptyMessage} colSpan={columns} />
           {loans?.map((loan) => (
             <tr key={loan.id}>
               <td className="strong">{loan.bookName}</td>
-              <td>{loan.readerFullName}</td>
+              {showReader && <td>{loan.readerFullName}</td>}
               <td className="hide-sm">{formatDate(loan.borrowedAt)}</td>
               <td>{formatDate(loan.dueDate)}</td>
               <td>
                 <LoanStatusBadge loan={loan} />
               </td>
-              <td className="actions">{loan.returnedAt === null && <ReturnButton loan={loan} />}</td>
+              {canReturn && <td className="actions">{loan.returnedAt === null && <ReturnButton loan={loan} />}</td>}
             </tr>
           ))}
         </tbody>

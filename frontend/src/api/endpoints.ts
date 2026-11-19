@@ -1,9 +1,12 @@
 import { api } from './client'
 import type {
+  AuthResponse,
+  AuthUser,
   Book,
   BookInput,
   BookListParams,
   ListParams,
+  LoginInput,
   Loan,
   LoanInput,
   LoanListParams,
@@ -13,6 +16,7 @@ import type {
   PagedResult,
   Reader,
   ReaderInput,
+  RegisterInput,
 } from './types'
 
 export interface CrudApi<TItem, TDetail, TInput, TParams extends ListParams = ListParams> {
@@ -47,4 +51,10 @@ export const loansApi = {
   list: (params: LoanListParams) => api<PagedResult<Loan>>('/borrow-records', { params }),
   borrow: (input: LoanInput) => api<Loan>('/borrow-records', { method: 'POST', body: input }),
   return: (id: number) => api<void>(`/borrow-records/${id}/return`, { method: 'POST' }),
+}
+
+export const authApi = {
+  login: (input: LoginInput) => api<AuthResponse>('/auth/login', { method: 'POST', body: input }),
+  register: (input: RegisterInput) => api<AuthResponse>('/auth/register', { method: 'POST', body: input }),
+  me: () => api<AuthUser>('/auth/me'),
 }

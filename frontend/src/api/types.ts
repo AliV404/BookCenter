@@ -120,3 +120,30 @@ export interface LoanListParams extends ListParams {
   readerId?: number
   bookId?: number
 }
+
+// ---------- Auth
+
+export type Role = 'Admin' | 'Reader'
+
+export interface AuthUser {
+  id: string
+  email: string
+  fullName: string
+  roles: Role[]
+  readerId: number | null
+}
+
+export interface AuthResponse {
+  token: string
+  expiresAt: string
+  user: AuthUser
+}
+
+export interface LoginInput {
+  email: string
+  password: string
+}
+
+export interface RegisterInput extends ReaderInput {
+  password: string
+}

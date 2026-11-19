@@ -1,6 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../auth/authContext'
 
-const links = [
+interface NavItem {
+  to: string
+  label: string
+  end?: boolean
+}
+
+const adminLinks: NavItem[] = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/loans', label: 'Loans' },
   { to: '/books', label: 'Books' },
@@ -10,7 +17,15 @@ const links = [
   { to: '/publishers', label: 'Publishers' },
 ]
 
+const readerLinks: NavItem[] = [
+  { to: '/my-loans', label: 'My loans' },
+  { to: '/books', label: 'Catalog' },
+]
+
 export function Layout() {
+  const { user, isAdmin, logout } = useAuth()
+  const links = isAdmin ? adminLinks : readerLinks
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -30,6 +45,17 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
+        {user && (
+          <div className="user-box">
+            <div className="user-name">{user.fullName}</div>
+            <div className="muted user-meta">
+              {user.email} · {isAdmin ? 'Admin' : 'Reader'}
+            </div>
+            <button type="button" className="button button--small" onClick={logout}>
+              Sign out
+            </button>
+          </div>
+        )}
       </aside>
       <main className="content">
         <Outlet />
