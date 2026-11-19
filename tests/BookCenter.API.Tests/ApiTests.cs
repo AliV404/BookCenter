@@ -14,19 +14,20 @@ using System.Text.Json.Serialization;
 
 namespace BookCenter.API.Tests
 {
-    public class ApiTests : IDisposable
+    /// <summary>Library behaviour, exercised as the seeded admin. Security rules live in AuthTests.</summary>
+    public class ApiTests : IAsyncLifetime
     {
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
         private readonly ApiFactory _factory = new();
-        private readonly HttpClient _client;
+        private HttpClient _client = null!;
 
-        public ApiTests() => _client = _factory.CreateClient();
+        public async Task InitializeAsync() => _client = await _factory.CreateAdminClientAsync();
 
-        public void Dispose()
+        public async Task DisposeAsync()
         {
             _client.Dispose();
-            _factory.Dispose();
+            await _factory.DisposeAsync();
         }
 
         // ---------- helpers ----------

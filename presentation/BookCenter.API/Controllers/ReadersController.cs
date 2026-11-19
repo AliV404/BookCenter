@@ -1,12 +1,14 @@
 using BookCenter.Application.Abstractions.Services;
 using BookCenter.Application.Common;
 using BookCenter.Application.DTOs.Readers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookCenter.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = Roles.Admin)]
     public class ReadersController : ControllerBase
     {
         private readonly IReaderService _service;

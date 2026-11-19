@@ -1,6 +1,7 @@
 using BookCenter.Application.Abstractions.Services;
 using BookCenter.Application.Common;
 using BookCenter.Application.DTOs.Categories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookCenter.API.Controllers
@@ -16,18 +17,21 @@ namespace BookCenter.API.Controllers
             _service = service;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<PagedResult<GetCategoryItemDto>>> GetAll([FromQuery] PaginationQuery query)
         {
             return Ok(await _service.GetAllAsync(query));
         }
 
+        [AllowAnonymous]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<GetCategoryDto>> GetById(int id)
         {
             return Ok(await _service.GetByIdAsync(id));
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         public async Task<ActionResult<GetCategoryDto>> Create(CreateCategoryDto dto)
         {
@@ -35,6 +39,7 @@ namespace BookCenter.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id }, await _service.GetByIdAsync(id));
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
         {
@@ -42,6 +47,7 @@ namespace BookCenter.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

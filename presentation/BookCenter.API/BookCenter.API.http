@@ -1,46 +1,74 @@
 @api = http://localhost:5209/api
 
+### Sign in as the development admin (run this first)
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@bookcenter.local", "password": "Admin12345" }
+
+###
+@token = {{login.response.body.$.token}}
+
+### Who am I?
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+### Register a reader account
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{ "name": "Leyla", "surname": "Mammadova", "email": "leyla@example.com", "phone": "+994 50 123 45 67", "password": "reader123" }
+
 ### List books (paged, searchable)
 GET {{api}}/books?page=1&pageSize=10&search=
 
 ### Create category
 POST {{api}}/categories
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Novel" }
 
 ### Create author
 POST {{api}}/authors
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Nizami Gəncəvi", "biography": "12th-century poet" }
 
 ### Create publisher
 POST {{api}}/publishers
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Qanun" }
 
 ### Create book
 POST {{api}}/books
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Khamsa", "isbn": "9789952123456", "publishYear": 2015, "totalCopies": 3, "authorId": 1, "categoryId": 1, "publisherId": 1 }
 
 ### Create reader
 POST {{api}}/readers
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Leyla", "surname": "Mammadova", "email": "reader@example.com", "phone": "+994 50 000 00 00" }
 
 ### Borrow a book
 POST {{api}}/borrow-records
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "bookId": 1, "readerId": 1, "dueDate": "2026-12-31T23:59:59Z" }
 
 ### Overdue loans
 GET {{api}}/borrow-records?status=overdue
+Authorization: Bearer {{token}}
 
 ### Return a loan
 POST {{api}}/borrow-records/1/return
+Authorization: Bearer {{token}}

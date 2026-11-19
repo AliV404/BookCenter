@@ -1,6 +1,16 @@
 using BookCenter.API.Infrastructure;
+using BookCenter.Application.Abstractions.Security;
+using BookCenter.Application.Common;
 using BookCenter.Application.ServiceRegistration;
+using BookCenter.Infrastructure.Security;
+using BookCenter.Infrastructure.ServiceRegistration;
+using BookCenter.Persistence.Identity;
 using BookCenter.Persistence.ServiceRegistration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +24,21 @@ builder.Services
 
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Adds the "Authorize" button to Swagger UI: paste the token from /api/auth/login.
+    var bearer = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+    };
+    options.AddSecurityDefinition("Bearer", bearer);
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement { [bearer] = Array.Empty<string>() });
+});
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -24,13 +48,46 @@ builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
-builder.Services.AddPersistenceServices(builder.Configuration);
+// ---------- Authentication & authorization
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((bearer, jwtOptions) =>
+    {
+        var jwt = jwtOptions.Value;
+        // Keep claim names exactly as issued ("sub", "role", ...) instead of mapping them to long URIs.
+        bearer.MapInboundClaims = false;
+        bearer.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = jwt.Issuer,
+            ValidAudience = jwt.Audience,
+            IssuerSigningKey = TokenService.CreateSigningKey(jwt.Key),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            NameClaimType = AppClaims.Name,
+            RoleClaimType = AppClaims.Role,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Secure by default: every endpoint needs a signed-in user unless it opts out with [AllowAnonymous].
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+});
+
 builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddPersistenceServices(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseStatusCodePages();
+app.UseStatusCodePages(); // gives empty 401/403 responses a ProblemDetails body
 
 if (app.Environment.IsDevelopment())
 {
@@ -45,7 +102,13 @@ else
 
 app.UseCors(FrontendCorsPolicy);
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+
+// Roles + first admin account (from Seed:AdminEmail / Seed:AdminPassword). Requires migrations to be applied.
+await app.Services.SeedIdentityAsync(app.Configuration);
 
 app.Run();
 

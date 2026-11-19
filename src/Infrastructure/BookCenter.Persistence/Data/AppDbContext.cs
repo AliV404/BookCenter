@@ -1,5 +1,8 @@
+using BookCenter.Application.Abstractions.Security;
 using BookCenter.Domain.Base;
 using BookCenter.Domain.Entities;
+using BookCenter.Persistence.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Linq.Expressions;
@@ -7,9 +10,15 @@ using System.Reflection;
 
 namespace BookCenter.Persistence.Data
 {
-    public class AppDbContext : DbContext
+    /// <summary>Library data plus the ASP.NET Core Identity tables (AspNetUsers, AspNetRoles, ...).</summary>
+    public class AppDbContext : IdentityDbContext<AppUser>
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        private readonly ICurrentUser _currentUser;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser) : base(options)
+        {
+            _currentUser = currentUser;
+        }
 
         public DbSet<Author> Authors { get; set; }
         public DbSet<Reader> Readers { get; set; }
@@ -20,6 +29,9 @@ namespace BookCenter.Persistence.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Identity's own table configuration must run first.
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes()
@@ -32,10 +44,8 @@ namespace BookCenter.Persistence.Data
                 entityType.SetQueryFilter(Expression.Lambda(notDeleted, e));
 
                 foreach (var auditColumn in new[] { nameof(BaseEntity.CreatedBy), nameof(BaseEntity.ModifiedBy), nameof(BaseEntity.DeletedBy) })
-                    entityType.FindProperty(auditColumn)?.SetMaxLength(100);
+                    entityType.FindProperty(auditColumn)?.SetMaxLength(256); // holds the user's email
             }
-
-            base.OnModelCreating(modelBuilder);
         }
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -58,6 +68,7 @@ namespace BookCenter.Persistence.Data
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
+            var who = _currentUser.Email; // null for anonymous requests and startup seeding
 
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             {
@@ -65,10 +76,12 @@ namespace BookCenter.Persistence.Data
                 {
                     case EntityState.Added:
                         entry.Entity.CreatedAt = now;
+                        entry.Entity.CreatedBy = who;
                         break;
 
                     case EntityState.Modified:
                         entry.Entity.ModifiedAt = now;
+                        entry.Entity.ModifiedBy = who;
                         break;
 
                     case EntityState.Deleted:
@@ -77,6 +90,7 @@ namespace BookCenter.Persistence.Data
                         entry.State = EntityState.Modified;
                         entry.Entity.IsDeleted = true;
                         entry.Entity.DeletedAt = now;
+                        entry.Entity.DeletedBy = who;
                         break;
                 }
             }
