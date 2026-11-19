@@ -33,29 +33,26 @@ namespace BookCenter.Persistence.Implementations.Services
             if (await _userManager.FindByEmailAsync(email) is not null)
                 throw new ConflictException("An account with this email already exists. Try signing in.");
 
+            // If staff already issued a reader card with this email at the desk, link to it
+            // (keeping the details staff entered); otherwise create a new card.
+            var reader = await _context.Readers.FirstOrDefaultAsync(r => r.Email == email);
+            if (reader?.UserId is not null)
+                throw new ConflictException("This reader card is already linked to another account.");
+            reader ??= new Reader { Name = dto.Name, Surname = dto.Surname, Email = email, Phone = dto.Phone.Trim() };
+
             // Account, role and reader card are created together or not at all.
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var user = new AppUser { UserName = email, Email = email, FullName = $"{dto.Name} {dto.Surname}" };
+            // The account's name always follows the card (also when staff later edit it).
+            var user = new AppUser { UserName = email, Email = email, FullName = $"{reader.Name} {reader.Surname}" };
             var created = await _userManager.CreateAsync(user, dto.Password);
             if (!created.Succeeded)
                 throw IdentityErrors.ToValidationException(created.Errors);
 
             (await _userManager.AddToRoleAsync(user, Roles.Reader)).ThrowIfFailed("assign the Reader role");
 
-            // If staff already issued a reader card with this email at the desk, link to it
-            // (keeping the details staff entered); otherwise create a new card.
-            var reader = await _context.Readers.FirstOrDefaultAsync(r => r.Email == email);
-            if (reader is null)
-            {
-                reader = new Reader { Name = dto.Name, Surname = dto.Surname, Email = email, Phone = dto.Phone.Trim() };
+            if (reader.Id == 0)
                 _context.Readers.Add(reader);
-            }
-            else if (reader.UserId is not null)
-            {
-                throw new ConflictException("This reader card is already linked to another account.");
-            }
-
             reader.UserId = user.Id;
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
