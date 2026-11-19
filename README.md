@@ -4,7 +4,7 @@ A small library management system: books, authors, categories, publishers, reade
 
 | Part | Stack |
 | --- | --- |
-| API | ASP.NET Core 8, EF Core 8 (SQL Server), FluentValidation |
+| API | ASP.NET Core 10, EF Core 10 (SQL Server), FluentValidation |
 | Frontend | React 19 + TypeScript, Vite, React Router, TanStack Query |
 | Tests | xUnit + `WebApplicationFactory` (EF InMemory) |
 
@@ -19,8 +19,18 @@ frontend/                           React app
 
 ## Running locally
 
-**1. Database** — set your SQL Server connection string in
-`presentation/BookCenter.API/appsettings.Development.json`, then apply migrations:
+**Prerequisites:** the [.NET 10 SDK](https://learn.microsoft.com/dotnet/core/install/linux) (Ubuntu:
+`sudo apt install dotnet-sdk-10.0`), Node.js 20+, and Docker for SQL Server.
+
+**1. Database:** start SQL Server 2022 in Docker (once; afterwards `sudo docker start bookcenter-sql`):
+
+```bash
+sudo docker run -d --name bookcenter-sql --restart unless-stopped -e ACCEPT_EULA=Y \
+  -e "MSSQL_SA_PASSWORD=BookCenter_Dev_2026!" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+```
+
+`appsettings.Development.json` already points at it (database `BookCenterDB`). That password is only for
+this local container; never use it for a real server. Then create or upgrade the schema:
 
 ```bash
 dotnet tool restore                  # installs dotnet-ef (pinned in dotnet-tools.json)
@@ -28,9 +38,11 @@ dotnet ef database update -p src/Infrastructure/BookCenter.Persistence -s presen
 ```
 
 > **Upgrading a database created before Nov 2026?** The upgrade adds length limits and unique indexes.
-> First run [`tools/pre-upgrade-check.sql`](tools/pre-upgrade-check.sql) against it (read-only, e.g. in
-> SSMS). Fix any `BLOCKER` rows, then run the update. If a migration does fail, it is rolled back and
-> nothing changes. `TotalCopies` is filled in from the available copies plus the books currently on loan.
+> First run [`tools/pre-upgrade-check.sql`](tools/pre-upgrade-check.sql) against it (read-only; e.g. with
+> `sudo docker exec -i bookcenter-sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'BookCenter_Dev_2026!' -d BookCenterDB < tools/pre-upgrade-check.sql`,
+> or the SQL Server extension for VS Code). Fix any `BLOCKER` rows, then run the update. If a migration
+> does fail, it is rolled back and nothing changes. `TotalCopies` is filled in from the available copies
+> plus the books currently on loan.
 
 **2. API** — runs on http://localhost:5209 (Swagger at `/swagger`; use **Authorize** with a token from `/api/auth/login`):
 
@@ -62,7 +74,7 @@ indexes and rowversion checks (the two concurrency tests are skipped). To run ev
 SQL Server (each test class creates and drops its own database from the migrations):
 
 ```bash
-docker run -d --name bookcenter-sql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=BookCenter_Dev_2026!" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+# with the bookcenter-sql container from step 1 running:
 export BOOKCENTER_TEST_SQLSERVER="Server=localhost,1433;User Id=sa;Password=BookCenter_Dev_2026!;TrustServerCertificate=True"
 dotnet test
 ```
