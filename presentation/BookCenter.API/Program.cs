@@ -1,5 +1,6 @@
 using BookCenter.API.Infrastructure;
 using BookCenter.Application.Abstractions.Security;
+using BookCenter.Application.Abstractions.Services;
 using BookCenter.Application.Common;
 using BookCenter.Application.ServiceRegistration;
 using BookCenter.Infrastructure.Security;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,6 +73,21 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             NameClaimType = AppClaims.Name,
             RoleClaimType = AppClaims.Role,
             ClockSkew = TimeSpan.FromSeconds(30),
+        };
+        bearer.Events = new JwtBearerEvents
+        {
+            // A JWT is valid until it expires, even if an admin locks the account or changes its
+            // roles. Comparing the token's security stamp with the database closes that gap.
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal!;
+                var auth = context.HttpContext.RequestServices.GetRequiredService<IAuthService>();
+                var valid = await auth.IsSessionValidAsync(
+                    principal.FindFirstValue(AppClaims.UserId) ?? "",
+                    principal.FindFirstValue(AppClaims.SecurityStamp));
+                if (!valid)
+                    context.Fail("This session has ended. Please sign in again.");
+            },
         };
     });
 

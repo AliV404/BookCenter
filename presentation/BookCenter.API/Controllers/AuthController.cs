@@ -40,5 +40,15 @@ namespace BookCenter.API.Controllers
         {
             return Ok(await _authService.GetCurrentUserAsync(_currentUser.UserId!));
         }
+
+        /// <summary>
+        /// Changes the signed-in user's password. Returns a new token: the old one, and those on
+        /// other devices, stop working.
+        /// </summary>
+        [HttpPost("change-password")]
+        public async Task<ActionResult<AuthResponseDto>> ChangePassword(ChangePasswordDto dto)
+        {
+            return Ok(await _authService.ChangePasswordAsync(_currentUser.UserId!, dto));
+        }
     }
 }

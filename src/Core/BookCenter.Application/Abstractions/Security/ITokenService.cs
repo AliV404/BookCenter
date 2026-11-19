@@ -1,6 +1,6 @@
 namespace BookCenter.Application.Abstractions.Security
 {
-    public record TokenSubject(string UserId, string Email, string FullName, IReadOnlyCollection<string> Roles, int? ReaderId);
+    public record TokenSubject(string UserId, string Email, string FullName, IReadOnlyCollection<string> Roles, int? ReaderId, string SecurityStamp);
 
     public record IssuedToken(string Token, DateTime ExpiresAt);
 

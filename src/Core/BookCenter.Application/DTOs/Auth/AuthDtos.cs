@@ -15,6 +15,12 @@ namespace BookCenter.Application.DTOs.Auth
         public string Password { get; set; } = null!;
     }
 
+    public class ChangePasswordDto
+    {
+        public string CurrentPassword { get; set; } = null!;
+        public string NewPassword { get; set; } = null!;
+    }
+
     public record CurrentUserDto(string Id, string Email, string FullName, IReadOnlyCollection<string> Roles, int? ReaderId);
 
     public record AuthResponseDto(string Token, DateTime ExpiresAt, CurrentUserDto User);

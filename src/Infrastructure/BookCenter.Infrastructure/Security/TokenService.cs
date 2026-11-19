@@ -25,6 +25,7 @@ namespace BookCenter.Infrastructure.Security
                 new(AppClaims.UserId, subject.UserId),
                 new(AppClaims.Email, subject.Email),
                 new(AppClaims.Name, subject.FullName),
+                new(AppClaims.SecurityStamp, subject.SecurityStamp),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
             claims.AddRange(subject.Roles.Select(role => new Claim(AppClaims.Role, role)));

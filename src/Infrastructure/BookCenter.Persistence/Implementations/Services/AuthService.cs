@@ -39,11 +39,9 @@ namespace BookCenter.Persistence.Implementations.Services
             var user = new AppUser { UserName = email, Email = email, FullName = $"{dto.Name} {dto.Surname}" };
             var created = await _userManager.CreateAsync(user, dto.Password);
             if (!created.Succeeded)
-                throw ToValidationException(created.Errors);
+                throw IdentityErrors.ToValidationException(created.Errors);
 
-            var roleAdded = await _userManager.AddToRoleAsync(user, Roles.Reader);
-            if (!roleAdded.Succeeded)
-                throw new InvalidOperationException("Could not assign the Reader role: " + string.Join(" ", roleAdded.Errors.Select(e => e.Description)));
+            (await _userManager.AddToRoleAsync(user, Roles.Reader)).ThrowIfFailed("assign the Reader role");
 
             // If staff already issued a reader card with this email at the desk, link to it
             // (keeping the details staff entered); otherwise create a new card.
@@ -71,7 +69,9 @@ namespace BookCenter.Persistence.Implementations.Services
                 ?? throw new AuthenticationFailedException(InvalidCredentials);
 
             if (await _userManager.IsLockedOutAsync(user))
-                throw new AuthenticationFailedException("Too many failed attempts. Please try again in a few minutes.");
+                throw new AuthenticationFailedException(user.IsLockedByAdmin()
+                    ? "This account has been locked. Please contact the library."
+                    : "Too many failed attempts. Please try again in a few minutes.");
 
             if (!await _userManager.CheckPasswordAsync(user, dto.Password))
             {
@@ -100,28 +100,42 @@ namespace BookCenter.Persistence.Implementations.Services
             return new CurrentUserDto(user.Id, user.Email!, user.FullName, roles, await FindReaderIdAsync(user.Id));
         }
 
+        public async Task<AuthResponseDto> ChangePasswordAsync(string userId, ChangePasswordDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId)
+                ?? throw new AuthenticationFailedException("Account not found.");
+
+            // Also rotates the security stamp, so sessions on other devices are signed out.
+            var changed = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!changed.Succeeded)
+                throw IdentityErrors.ToValidationException(changed.Errors, passwordField: "newPassword");
+
+            var roles = (await _userManager.GetRolesAsync(user)).ToList();
+            return CreateResponse(user, roles, await FindReaderIdAsync(user.Id));
+        }
+
+        public async Task<bool> IsSessionValidAsync(string userId, string? securityStamp)
+        {
+            if (securityStamp is null)
+                return false;
+
+            // One small query per authenticated request. Every admin action that changes what a
+            // user may do (roles, lock, password reset, deleting their reader card) rotates the stamp.
+            var currentStamp = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.SecurityStamp)
+                .FirstOrDefaultAsync();
+
+            return currentStamp == securityStamp;
+        }
+
         private Task<int?> FindReaderIdAsync(string userId) =>
             _context.Readers.Where(r => r.UserId == userId).Select(r => (int?)r.Id).FirstOrDefaultAsync();
 
         private AuthResponseDto CreateResponse(AppUser user, IReadOnlyCollection<string> roles, int? readerId)
         {
-            var token = _tokenService.CreateToken(new TokenSubject(user.Id, user.Email!, user.FullName, roles, readerId));
+            var token = _tokenService.CreateToken(new TokenSubject(user.Id, user.Email!, user.FullName, roles, readerId, user.SecurityStamp!));
             return new AuthResponseDto(token.Token, token.ExpiresAt, new CurrentUserDto(user.Id, user.Email!, user.FullName, roles, readerId));
-        }
-
-        /// <summary>Maps Identity's error codes onto the request field they belong to.</summary>
-        private static RequestValidationException ToValidationException(IEnumerable<IdentityError> errors)
-        {
-            var byField = errors
-                .GroupBy(e => e.Code switch
-                {
-                    var c when c.StartsWith("Password") => "password",
-                    var c when c.Contains("Email") || c.Contains("UserName") => "email",
-                    _ => ""
-                })
-                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
-
-            return new RequestValidationException(byField);
         }
     }
 }

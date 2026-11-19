@@ -46,6 +46,7 @@ namespace BookCenter.Persistence.ServiceRegistration
             services.AddScoped<IReaderService, ReaderService>();
             services.AddScoped<IBorrowRecordService, BorrowRecordService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserService, UserService>();
 
             return services;
         }

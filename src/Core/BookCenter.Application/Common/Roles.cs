@@ -19,5 +19,11 @@ namespace BookCenter.Application.Common
         public const string Name = "name";
         public const string Role = "role";
         public const string ReaderId = "reader_id";
+
+        /// <summary>
+        /// Identity's security stamp at sign-in. It changes whenever the account's access changes,
+        /// which invalidates every token issued before (see IAuthService.IsSessionValidAsync).
+        /// </summary>
+        public const string SecurityStamp = "stamp";
     }
 }
