@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace BookCenter.Application.DTOs.Books
 {
+    /// <summary>Short book reference, used inside author / category / publisher details.</summary>
     public record GetBookItemDto(int Id, string Name);
 }

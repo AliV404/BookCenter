@@ -17,7 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\BookCenter.Application\BookCenter.Application.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\BookCenter.Infrastructure\BookCenter.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructure\BookCenter.Persistance\BookCenter.Persistance.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\BookCenter.Persistence\BookCenter.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

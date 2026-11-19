@@ -1,49 +1,52 @@
-﻿using BookCenter.Application.Abstractions.Services;
+using BookCenter.Application.Abstractions.Services;
+using BookCenter.Application.Common;
 using BookCenter.Application.DTOs.Publishers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace BookCenter.API.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class PublishersController : ControllerBase
     {
-        private readonly IPublihserService _service;
+        private readonly IPublisherService _service;
 
-        public PublishersController(IPublihserService service)
+        public PublishersController(IPublisherService service)
         {
             _service = service;
         }
+
         [HttpGet]
-        public async Task<IActionResult> Get(int page=1, int take = 10)
+        public async Task<ActionResult<PagedResult<GetPublisherItemDto>>> GetAll([FromQuery] PaginationQuery query)
         {
-            return Ok(await _service.GetAllAsync(page, take));
+            return Ok(await _service.GetAllAsync(query));
         }
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
+
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<GetPublisherDto>> GetById(int id)
         {
             return Ok(await _service.GetByIdAsync(id));
         }
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm]CreatePublisherDto publisherDto)
+        public async Task<ActionResult<GetPublisherDto>> Create(CreatePublisherDto dto)
         {
-            await _service.CreateAsync(publisherDto);
-            return Created();
+            var id = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id }, await _service.GetByIdAsync(id));
         }
-        [HttpPut]
-        public async Task<IActionResult> Update(int id, UpdatePublisherDto publisherDto)
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, UpdatePublisherDto dto)
         {
-            await _service.UpdateAsync(id, publisherDto);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
-        [HttpDelete]
+
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);
-            return Ok();
+            return NoContent();
         }
-
     }
 }

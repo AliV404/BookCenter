@@ -1,18 +1,14 @@
-﻿using BookCenter.Application.DTOs.Authors;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BookCenter.Application.Common;
+using BookCenter.Application.DTOs.Authors;
 
 namespace BookCenter.Application.Abstractions.Services
 {
     public interface IAuthorService
     {
-        Task<IEnumerable<GetAuthorItemDto>> GetAllAsync(int page, int take);
+        Task<PagedResult<GetAuthorItemDto>> GetAllAsync(PaginationQuery query);
         Task<GetAuthorDto> GetByIdAsync(int id);
-        Task CreateAsync(CreateAuthorDto authorDto);
-        Task UpdateAsync(int id, UpdateAuthorDto authorDto);
+        Task<int> CreateAsync(CreateAuthorDto dto);
+        Task UpdateAsync(int id, UpdateAuthorDto dto);
         Task DeleteAsync(int id);
     }
 }

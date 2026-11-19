@@ -1,17 +1,13 @@
-﻿using BookCenter.Application.DTOs.Categories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BookCenter.Application.Common;
+using BookCenter.Application.DTOs.Categories;
 
 namespace BookCenter.Application.Abstractions.Services
 {
     public interface ICategoryService
     {
-        Task<IEnumerable<GetCategoyItemDto>> GetAllAsync(int page, int take);
-        Task<GetCategoyDto> GetByIdAsync(int id);
-        Task CreateAsync(CreateCategoyDto dto);
+        Task<PagedResult<GetCategoryItemDto>> GetAllAsync(PaginationQuery query);
+        Task<GetCategoryDto> GetByIdAsync(int id);
+        Task<int> CreateAsync(CreateCategoryDto dto);
         Task UpdateAsync(int id, UpdateCategoryDto dto);
         Task DeleteAsync(int id);
     }

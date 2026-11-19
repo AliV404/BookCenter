@@ -1,16 +1,16 @@
-﻿using BookCenter.Domain.Base;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BookCenter.Domain.Base;
 
 namespace BookCenter.Domain.Entities
 {
-    public class Book:BaseNameableEntity
+    public class Book : BaseNameableEntity
     {
         public string ISBN { get; set; } = null!;
         public int PublishYear { get; set; }
+
+        /// <summary>How many physical copies the library owns.</summary>
+        public int TotalCopies { get; set; }
+
+        /// <summary>Copies currently on the shelf (TotalCopies minus active loans). Maintained by the borrow/return flow.</summary>
         public int CopiesAvailable { get; set; }
 
         // Relations
@@ -24,6 +24,5 @@ namespace BookCenter.Domain.Entities
         public Publisher Publisher { get; set; } = null!;
 
         public ICollection<BorrowRecord> BorrowRecords { get; set; } = new List<BorrowRecord>();
-
     }
 }

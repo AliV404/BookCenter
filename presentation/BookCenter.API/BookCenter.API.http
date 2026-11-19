@@ -1,6 +1,46 @@
-@BookCenter.API_HostAddress = http://localhost:5209
+@api = http://localhost:5209/api
 
-GET {{BookCenter.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### List books (paged, searchable)
+GET {{api}}/books?page=1&pageSize=10&search=
 
-###
+### Create category
+POST {{api}}/categories
+Content-Type: application/json
+
+{ "name": "Novel" }
+
+### Create author
+POST {{api}}/authors
+Content-Type: application/json
+
+{ "name": "Nizami Gəncəvi", "biography": "12th-century poet" }
+
+### Create publisher
+POST {{api}}/publishers
+Content-Type: application/json
+
+{ "name": "Qanun" }
+
+### Create book
+POST {{api}}/books
+Content-Type: application/json
+
+{ "name": "Khamsa", "isbn": "9789952123456", "publishYear": 2015, "totalCopies": 3, "authorId": 1, "categoryId": 1, "publisherId": 1 }
+
+### Create reader
+POST {{api}}/readers
+Content-Type: application/json
+
+{ "name": "Leyla", "surname": "Mammadova", "email": "reader@example.com", "phone": "+994 50 000 00 00" }
+
+### Borrow a book
+POST {{api}}/borrow-records
+Content-Type: application/json
+
+{ "bookId": 1, "readerId": 1, "dueDate": "2026-12-31T23:59:59Z" }
+
+### Overdue loans
+GET {{api}}/borrow-records?status=overdue
+
+### Return a loan
+POST {{api}}/borrow-records/1/return

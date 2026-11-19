@@ -1,34 +1,26 @@
-﻿using BookCenter.Domain.Base;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using BookCenter.Domain.Base;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BookCenter.Application.Abstractions.Repositories.Generic
 {
-    public interface IRepository<T> where T : BaseEntity, new()
+    public interface IRepository<T> where T : BaseEntity
     {
-        IQueryable<T> GetAll
-            (
-            Expression<Func<T, bool>>? expression = null,
-            Expression<Func<T, object>>? orderExpression = null,
-            int skip = 0,
-            int take = 0,
-            bool isTracking = false,
-            bool isDescending = false,
-            params string[] includes
-            );
+        /// <summary>
+        /// Returns a composable query. Soft-deleted rows are already excluded by a global query filter.
+        /// Ordering, paging and projection are left to the caller.
+        /// </summary>
+        IQueryable<T> GetAll(Expression<Func<T, bool>>? expression = null, bool isTracking = false, params string[] includes);
 
-        Task<T> GetByIdAsync(int id, params string[] includes);
+        /// <summary>Loads a tracked entity (ready to be modified) or null when it doesn't exist.</summary>
+        Task<T?> GetByIdAsync(int id, params string[] includes);
+
+        Task<bool> AnyAsync(Expression<Func<T, bool>> expression);
 
         Task AddAsync(T entity);
 
-        void Update(T entity);
-
+        /// <summary>Soft delete: the row is kept and flagged IsDeleted (see AppDbContext.SaveChangesAsync).</summary>
         void Delete(T entity);
-        Task<bool> AnyAsync(Expression<Func<T, bool>> expression);
+
         Task<int> SaveChangesAsync();
     }
 }

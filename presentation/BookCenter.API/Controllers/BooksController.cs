@@ -1,12 +1,11 @@
-﻿using BookCenter.Application.Abstractions.Services;
+using BookCenter.Application.Abstractions.Services;
+using BookCenter.Application.Common;
 using BookCenter.Application.DTOs.Books;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace BookCenter.API.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class BooksController : ControllerBase
     {
@@ -16,33 +15,38 @@ namespace BookCenter.API.Controllers
         {
             _service = service;
         }
+
         [HttpGet]
-        public async Task<IActionResult> Get(int page=1, int take= 10)
+        public async Task<ActionResult<PagedResult<GetBookDto>>> GetAll([FromQuery] BookQuery query)
         {
-            return Ok(await _service.GetAllAsync(page, take));
+            return Ok(await _service.GetAllAsync(query));
         }
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
+
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<GetBookDto>> GetById(int id)
         {
             return Ok(await _service.GetByIdAsync(id));
         }
+
         [HttpPost]
-        public async Task<IActionResult> Post([FromForm]CreateBookDto bookDto)
+        public async Task<ActionResult<GetBookDto>> Create(CreateBookDto dto)
         {
-            await _service.CreateAsync(bookDto);
-            return Created();
+            var id = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id }, await _service.GetByIdAsync(id));
         }
-        [HttpPut]
-        public async Task<IActionResult> Put(int id, UpdateBookDto bookDto)
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, UpdateBookDto dto)
         {
-            await _service.UpdateAsync(id, bookDto);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
-        [HttpDelete]
+
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);
-            return Ok();
+            return NoContent();
         }
     }
 }
