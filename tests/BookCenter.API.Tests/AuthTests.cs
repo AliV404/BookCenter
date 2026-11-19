@@ -140,9 +140,11 @@ namespace BookCenter.API.Tests
             var (_, auth) = await RegisterReaderAsync("Rauf@Example.com");
 
             Assert.Equal(card.Id, auth.User.ReaderId);
+            Assert.Equal("Rauf Huseynov", auth.User.FullName); // the account is named after the card, not the form
             var readers = await _admin.GetFromJsonAsync<PagedResult<GetReaderDto>>("/api/readers", Json);
             Assert.Equal(1, readers!.TotalCount);
             Assert.Equal("Rauf", readers.Items[0].Name); // staff-entered details are kept
+            Assert.True(readers.Items[0].HasAccount);
         }
 
         [Fact]
