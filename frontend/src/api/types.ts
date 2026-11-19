@@ -83,6 +83,8 @@ export interface Reader {
   email: string
   phone: string
   activeLoans: number
+  /** Signs in online; their email is also their login. */
+  hasAccount: boolean
 }
 
 export interface ReaderInput {
@@ -146,4 +148,25 @@ export interface LoginInput {
 
 export interface RegisterInput extends ReaderInput {
   password: string
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string
+  newPassword: string
+}
+
+/** A login account as seen by an admin. */
+export interface UserAccount {
+  id: string
+  email: string
+  fullName: string
+  roles: Role[]
+  /** Linked reader card; null for staff-only accounts or when the card was deleted. */
+  readerId: number | null
+  /** Set while locked, by an admin (far future) or after too many failed logins. */
+  lockedUntil: string | null
+}
+
+export interface UserListParams extends ListParams {
+  role?: Role
 }

@@ -12,6 +12,7 @@ const adminLinks: NavItem[] = [
   { to: '/loans', label: 'Loans' },
   { to: '/books', label: 'Books' },
   { to: '/readers', label: 'Readers' },
+  { to: '/users', label: 'Users' },
   { to: '/authors', label: 'Authors' },
   { to: '/categories', label: 'Categories' },
   { to: '/publishers', label: 'Publishers' },
@@ -51,9 +52,14 @@ export function Layout() {
             <div className="muted user-meta">
               {user.email} · {isAdmin ? 'Admin' : 'Reader'}
             </div>
-            <button type="button" className="button button--small" onClick={logout}>
-              Sign out
-            </button>
+            <div className="user-actions">
+              <NavLink to="/account" className="button button--small">
+                Account
+              </NavLink>
+              <button type="button" className="button button--small" onClick={logout}>
+                Sign out
+              </button>
+            </div>
           </div>
         )}
       </aside>

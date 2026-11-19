@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { authSession } from '../api/client'
 import { authApi } from '../api/endpoints'
 import type { AuthResponse, AuthUser } from '../api/types'
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authSession.token = stored?.token ?? null
     return stored
   })
+  const userIdRef = useRef(session?.user.id ?? null)
 
   const applySession = useCallback(
     (next: StoredSession | null) => {
@@ -54,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // Storage unavailable (private mode): the session just won't survive a reload.
       }
-      queryClient.clear() // never show one user's cached data to the next
+      // Never show one user's cached data to the next (a refreshed token for the same user keeps it).
+      const nextUserId = next?.user.id ?? null
+      if (nextUserId !== userIdRef.current) queryClient.clear()
+      userIdRef.current = nextUserId
       setSession(next)
     },
     [queryClient],
@@ -62,12 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => applySession(null), [applySession])
 
-  // Expired/revoked token → sign out. Route guards then redirect to /login.
+  // Expired or revoked token (password reset, account locked, roles changed...) → sign out.
+  // Route guards then redirect to /login.
   useEffect(() => {
     authSession.onUnauthorized = () => {
       if (!authSession.token) return
       applySession(null)
-      notify('Your session has expired. Please sign in again.')
+      notify('Your session has ended. Please sign in again.')
     }
   }, [applySession, notify])
 
@@ -90,6 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: session?.user.roles.includes('Admin') ?? false,
       login: async (input) => signIn(await authApi.login(input)),
       register: async (input) => signIn(await authApi.register(input)),
+      changePassword: async (input) => {
+        signIn(await authApi.changePassword(input))
+      },
       logout,
     }
   }, [session, applySession, logout])

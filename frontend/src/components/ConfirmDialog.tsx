@@ -6,13 +6,23 @@ interface ConfirmDialogProps {
   title: string
   message: string
   confirmLabel?: string
+  /** 'danger' (default) for destructive actions, 'primary' for reversible ones. */
+  tone?: 'danger' | 'primary'
   successMessage: string
   onConfirm: () => Promise<unknown>
   onClose: () => void
 }
 
-/** Confirmation for destructive actions. Server refusals (e.g. 409 "still has books") show inside the dialog. */
-export function ConfirmDialog({ title, message, confirmLabel = 'Delete', successMessage, onConfirm, onClose }: ConfirmDialogProps) {
+/** Confirmation for consequential actions. Server refusals (e.g. 409 "still has books") show inside the dialog. */
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = 'Delete',
+  tone = 'danger',
+  successMessage,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps) {
   const mutation = useSaveMutation(onConfirm, successMessage, onClose)
 
   return (
@@ -27,7 +37,7 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Delete', success
         </button>
         <button
           type="button"
-          className="button button--danger"
+          className={`button button--${tone}`}
           disabled={mutation.isPending}
           onClick={() => mutation.mutate()}
         >

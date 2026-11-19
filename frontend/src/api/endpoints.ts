@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   AuthUser,
   Book,
+  ChangePasswordInput,
   BookInput,
   BookListParams,
   ListParams,
@@ -17,6 +18,8 @@ import type {
   Reader,
   ReaderInput,
   RegisterInput,
+  UserAccount,
+  UserListParams,
 } from './types'
 
 export interface CrudApi<TItem, TDetail, TInput, TParams extends ListParams = ListParams> {
@@ -57,4 +60,15 @@ export const authApi = {
   login: (input: LoginInput) => api<AuthResponse>('/auth/login', { method: 'POST', body: input }),
   register: (input: RegisterInput) => api<AuthResponse>('/auth/register', { method: 'POST', body: input }),
   me: () => api<AuthUser>('/auth/me'),
+  changePassword: (input: ChangePasswordInput) =>
+    api<AuthResponse>('/auth/change-password', { method: 'POST', body: input }),
+}
+
+export const usersApi = {
+  list: (params: UserListParams) => api<PagedResult<UserAccount>>('/users', { params }),
+  setAdmin: (id: string, isAdmin: boolean) => api<UserAccount>(`/users/${id}/admin`, { method: 'PUT', body: { isAdmin } }),
+  lock: (id: string) => api<UserAccount>(`/users/${id}/lock`, { method: 'POST' }),
+  unlock: (id: string) => api<UserAccount>(`/users/${id}/unlock`, { method: 'POST' }),
+  resetPassword: (id: string, newPassword: string) =>
+    api<void>(`/users/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
 }

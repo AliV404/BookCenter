@@ -69,6 +69,11 @@ export function ReadersPage() {
               <tr key={reader.id}>
                 <td className="strong">
                   {reader.name} {reader.surname}
+                  {reader.hasAccount && (
+                    <span className="badge badge--muted reader-account" title="Signs in online with this email">
+                      Online
+                    </span>
+                  )}
                 </td>
                 <td>{reader.email}</td>
                 <td className="hide-sm">{reader.phone}</td>
@@ -150,7 +155,11 @@ function ReaderForm({ existing, onClose }: { existing?: Reader; onClose: () => v
           <input className="input" value={form.surname} onChange={set('surname')} maxLength={100} autoComplete="off" required />
         </Field>
       </div>
-      <Field label="Email" errors={errors.email}>
+      <Field
+        label="Email"
+        errors={errors.email}
+        hint={existing?.hasAccount ? 'This reader signs in online: changing it also changes their sign-in email.' : undefined}
+      >
         <input className="input" type="email" value={form.email} onChange={set('email')} maxLength={256} autoComplete="off" required />
       </Field>
       <Field label="Phone" errors={errors.phone}>

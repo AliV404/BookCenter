@@ -189,6 +189,39 @@ a:hover {
   box-shadow: var(--shadow);
 }
 
+/* ---------- Account ---------- */
+.panel {
+  padding: 20px;
+  max-width: 560px;
+  margin-bottom: 16px;
+}
+
+.panel h2 {
+  font-size: 1.05rem;
+  margin: 0 0 14px;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 20px;
+  margin: 0;
+}
+
+.details dt {
+  color: var(--text-muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.panel-note {
+  margin: 16px 0 0;
+  font-size: 0.88rem;
+}
+
 /* ---------- Dashboard ---------- */
 .stats {
   display: grid;
@@ -642,9 +675,18 @@ textarea.input {
   font-weight: 600;
 }
 
+.user-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.user-actions .button {
+  text-decoration: none;
+}
+
 .user-meta {
   font-size: 0.8rem;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .auth-page {
@@ -691,4 +733,9 @@ textarea.input {
   .user-meta {
     flex: 1;
   }
+}
+
+.reader-account {
+  margin-left: 8px;
+  font-weight: 500;
 }
