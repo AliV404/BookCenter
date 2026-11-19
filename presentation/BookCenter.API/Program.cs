@@ -5,6 +5,7 @@ using BookCenter.Application.Common;
 using BookCenter.Application.ServiceRegistration;
 using BookCenter.Infrastructure.Security;
 using BookCenter.Infrastructure.ServiceRegistration;
+using BookCenter.Persistence.Data;
 using BookCenter.Persistence.Identity;
 using BookCenter.Persistence.ServiceRegistration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -44,6 +45,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
 builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
@@ -111,9 +113,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-else
+else if (app.Configuration.GetValue("HttpsRedirection", true))
 {
-    // In development the React dev server proxies to plain http; redirecting would break that.
+    // Not in development: the React dev server proxies to plain http there.
+    // Also off in Docker (HttpsRedirection=false), where the API only sits behind nginx.
     app.UseHttpsRedirection();
 }
 
@@ -123,6 +126,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+// For Docker/monitoring: 200 "Healthy" when the API is up and can reach the database.
+app.MapHealthChecks("/api/health").AllowAnonymous();
+
+// Containers set Database__MigrateOnStartup=true; locally run `dotnet ef database update` instead.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+    await app.Services.MigrateDatabaseAsync();
 
 // Roles + first admin account (from Seed:AdminEmail / Seed:AdminPassword). Requires migrations to be applied.
 await app.Services.SeedIdentityAsync(app.Configuration);
