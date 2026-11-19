@@ -27,7 +27,7 @@ dotnet tool restore                  # installs dotnet-ef (pinned in dotnet-tool
 dotnet ef database update -p src/Infrastructure/BookCenter.Persistence -s presentation/BookCenter.API
 ```
 
-**2. API** — runs on http://localhost:5209 (Swagger at `/swagger`):
+**2. API** — runs on http://localhost:5209 (Swagger at `/swagger`; use **Authorize** with a token from `/api/auth/login`):
 
 ```bash
 dotnet run --project presentation/BookCenter.API --launch-profile http
@@ -41,11 +41,32 @@ npm install
 npm run dev
 ```
 
+On first start the API creates the `Admin` and `Reader` roles and a development admin account from
+`Seed` in `appsettings.Development.json` — **admin@bookcenter.local / Admin12345**. Change it, and never
+reuse the development `Jwt:Key` outside your machine; in production set `Jwt__Key` (32+ chars) via an
+environment variable or `dotnet user-secrets`.
+
 **Tests:**
 
 ```bash
 dotnet test
 ```
+
+## Accounts and roles
+
+| Role | Can do |
+| --- | --- |
+| anonymous | browse the catalog (`GET` books, authors, categories, publishers), register, sign in |
+| **Reader** | the above + see **their own** loans (`GET /api/borrow-records` is scoped to them) |
+| **Admin** | everything: manage catalog, readers and loans |
+
+- `POST /api/auth/register` creates a Reader account *and* a reader card. If staff already created a card
+  with the same email, the account is linked to it instead.
+- `POST /api/auth/login` returns `{ token, expiresAt, user }`; send `Authorization: Bearer <token>`.
+  5 wrong passwords lock the account for 5 minutes. `GET /api/auth/me` returns the current user.
+- Endpoints require a signed-in user **by default** (fallback policy); public ones opt out with `[AllowAnonymous]`.
+- `CreatedBy` / `ModifiedBy` / `DeletedBy` record the signed-in user's email.
+- If staff delete a reader card, that reader can no longer sign in.
 
 ## API overview
 
