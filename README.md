@@ -58,7 +58,7 @@ dotnet test
 | --- | --- |
 | anonymous | browse the catalog (`GET` books, authors, categories, publishers), register, sign in |
 | **Reader** | the above + see **their own** loans (`GET /api/borrow-records` is scoped to them) |
-| **Admin** | everything: manage catalog, readers and loans |
+| **Admin** | everything: manage catalog, readers, loans and user accounts |
 
 - `POST /api/auth/register` creates a Reader account *and* a reader card. If staff already created a card
   with the same email, the account is linked to it instead.
@@ -66,7 +66,26 @@ dotnet test
   5 wrong passwords lock the account for 5 minutes. `GET /api/auth/me` returns the current user.
 - Endpoints require a signed-in user **by default** (fallback policy); public ones opt out with `[AllowAnonymous]`.
 - `CreatedBy` / `ModifiedBy` / `DeletedBy` record the signed-in user's email.
-- If staff delete a reader card, that reader can no longer sign in.
+- If staff delete a reader card, that reader can no longer sign in. Creating a new card with the same
+  email links it to their account again.
+- `POST /api/auth/change-password` changes your own password and returns a fresh token.
+
+### Managing accounts (Admin, `/api/users`, "Users" page)
+
+| Action | Endpoint |
+| --- | --- |
+| list / search / filter by role | `GET /api/users?search=&role=Admin` |
+| grant or remove admin rights | `PUT /api/users/{id}/admin` `{ "isAdmin": true }` |
+| lock (until unlocked) / unlock | `POST /api/users/{id}/lock`, `POST /api/users/{id}/unlock` |
+| set a new password | `POST /api/users/{id}/reset-password` `{ "newPassword": "..." }` |
+
+- **Changes take effect immediately.** Each token carries the account's security stamp, which is
+  checked on every request. Changing roles, locking, resetting the password, changing the reader's email
+  or deleting their card rotates the stamp, so the user's existing sessions end at once instead of when
+  the token expires.
+- A reader's login email **is** their card's email: editing it on the Readers page changes how they sign in.
+- Admins can't demote, lock or reset the password of their own account, so there is always at least one admin.
+  An account without a reader card can't be demoted (it would be unable to sign in); lock it instead.
 
 ## API overview
 
