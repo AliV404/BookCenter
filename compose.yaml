@@ -1,0 +1,49 @@
+# Whole app in containers:  cp .env.example .env  (then edit it)  &&  docker compose up -d --build
+# Open http://localhost:8080 (or WEB_PORT from .env).
+name: bookcenter
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/opt/mssql
+    # Not published to the host: only the API talks to it (and it can't clash with a local SQL Server on 1433).
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: presentation/BookCenter.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Server=db,1433;Database=BookCenterDB;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True"
+      Database__MigrateOnStartup: "true"
+      # Only reachable through nginx over plain http here; put TLS in front of nginx for a public server.
+      HttpsRedirection: "false"
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env (at least 32 characters)}
+      Seed__AdminEmail: ${ADMIN_EMAIL:-admin@bookcenter.local}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  db-data:

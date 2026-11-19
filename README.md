@@ -1,5 +1,7 @@
 # BookCenter
 
+[![CI](https://github.com/AliV404/BookCenter/actions/workflows/ci.yml/badge.svg)](https://github.com/AliV404/BookCenter/actions/workflows/ci.yml)
+
 A small library management system: books, authors, categories, publishers, readers and loans.
 
 | Part | Stack |
@@ -17,7 +19,31 @@ tests/BookCenter.API.Tests          end-to-end API tests
 frontend/                           React app
 ```
 
-## Running locally
+## Run everything with Docker
+
+The quickest way to try it: SQL Server, the API and the web app in three containers.
+
+```bash
+cp .env.example .env        # then change the passwords and the JWT key in .env
+sudo docker compose up -d --build
+```
+
+Open **http://localhost:8080** and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`. The API applies
+database migrations on start; data lives in the `db-data` volume (`docker compose down -v` deletes it).
+nginx serves the frontend and forwards `/api` to the API, and `GET /api/health` reports whether the API can
+reach its database. For a public server, put HTTPS in front of port 8080 (e.g. Caddy or a cloud load balancer).
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+| Job | What it checks |
+| --- | --- |
+| API tests | all tests against a real SQL Server 2022, migrations in sync with the model, no vulnerable NuGet packages |
+| Frontend | `npm run lint`, `npm run build`, `npm audit` |
+| Docker Compose | builds and starts the whole stack, then checks health, admin sign-in and the web app |
+
+## Running locally (for development)
 
 **Prerequisites:** the [.NET 10 SDK](https://learn.microsoft.com/dotnet/core/install/linux) (Ubuntu:
 `sudo apt install dotnet-sdk-10.0`), Node.js 20+, and Docker for SQL Server.

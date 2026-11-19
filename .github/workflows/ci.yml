@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:            # every branch
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API tests (SQL Server)
+    runs-on: ubuntu-latest
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: CI_Only_Passw0rd!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'CI_Only_Passw0rd!' -Q 'SELECT 1' -b -o /dev/null"
+          --health-interval 10s --health-timeout 5s --health-retries 12 --health-start-period 20s
+    env:
+      # Runs every test against real SQL Server (see tests/BookCenter.API.Tests/ApiFactory.cs).
+      BOOKCENTER_TEST_SQLSERVER: Server=localhost,1433;User Id=sa;Password=CI_Only_Passw0rd!;TrustServerCertificate=True
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
+      - name: Migrations are in sync with the model
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes -p src/Infrastructure/BookCenter.Persistence -s presentation/BookCenter.API
+      - name: No vulnerable NuGet packages
+        run: |
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          ! grep -q "has the following vulnerable packages" vulnerable.txt
+
+  frontend:
+    name: Frontend lint & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  compose:
+    name: Docker Compose smoke test
+    needs: [api, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build --wait --wait-timeout 300
+      - name: API is healthy through nginx
+        run: curl -fsS --retry 30 --retry-delay 3 --retry-all-errors http://localhost:8080/api/health
+      - name: Admin can sign in
+        run: |
+          set -a; . ./.env; set +a
+          curl -fsS -X POST http://localhost:8080/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" | grep -q '"token"'
+      - name: Frontend is served, including client-side routes
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q '<title>BookCenter</title>'
+          curl -fsS http://localhost:8080/books | grep -q '<div id="root">'
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down -v
