@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net.Http.Headers;
@@ -77,7 +78,10 @@ namespace BookCenter.API.Tests
 
             builder.ConfigureServices(services =>
             {
+                // Drop the app's UseSqlServer(...) registration. Since EF Core 9 it lives in
+                // IDbContextOptionsConfiguration, not only in the built DbContextOptions.
                 services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 if (UsesSqlServer)
                     services.AddDbContext<AppDbContext>(options => options.UseSqlServer(SqlServerConnectionString));
                 else
